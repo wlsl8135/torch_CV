@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
 from model import AlexNet
+import torch.optim as optim
+import torch.nn as nn
 transform = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -25,3 +27,54 @@ if __name__ == "__main__":
     AlexNet_model =AlexNet(num_classes=10)
     AlexNet_model.to(device)
     print(AlexNet_model.eval())
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(AlexNet_model.parameters(), lr=0.001)
+    for epoch in range(10):  # loop over the dataset multiple times
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data[0].to(device), data[1].to(device)            
+            optimizer.zero_grad()            
+            output = AlexNet_model(inputs)
+            loss = criterion(output, labels)
+            loss.backward()
+            optimizer.step()            
+            running_loss += loss.item()
+            if i % 2000 == 1999:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' %
+                    (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs = AlexNet_model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
+    class_correct = list(0. for i in range(10))
+    class_total = list(0. for i in range(10))
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs = AlexNet_model(images)
+            _, predicted = torch.max(outputs, 1)
+            c = (predicted == labels).squeeze()
+            for i in range(4):
+                label = labels[i]
+                class_correct[label] += c[i].item()
+                class_total[label] += 1
+
+    for i in range(10):
+        print('Accuracy of %5s : %2d %%' % (
+            classes[i], 100 * class_correct[i] / class_total[i]))
+
+        avg = 0
+    for i in range(10):
+        temp = (100 * class_correct[i] / class_total[i])
+    avg = avg + temp
+    avg = avg/10
+    print('Average accuracy = ', avg)
+
